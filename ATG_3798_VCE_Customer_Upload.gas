@@ -1,0 +1,698 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Variable.UDT.Customer.Define("Field",String)
+Variable.UDT.Customer.Define("Size",String)
+Variable.UDT.Customer.Define("Value",String)
+Variable.UDT.Customer.Define("Required",Boolean)
+Variable.UDT.Customer.Define("Format",String)
+Variable.UDT.Customer.Define("Numeric",Boolean)
+Variable.uGlobal.uCustomer.Declare("Customer")
+Variable.Global.file.Declare(String)
+Variable.Global.log.Declare(String)
+Variable.Global.completed.Declare(String)
+Function.Intrinsic.Debug.SetScriptVersion("0.0.199","True")
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+V.local.sfile.Declare(String)
+V.Local.bret.Declare(Boolean)
+F.Intrinsic.Control.CallSub(Prepudt)
+
+'V.global.log.Set("X:\CUSTUP\log")
+V.Global.log.Set("\\VCE-WPGSTERM01\custmast\log\Log.txt")
+F.Intrinsic.file.Exists(V.global.log,V.Local.bret)
+F.Intrinsic.Control.If(V.Local.bret,=,False)
+	F.Intrinsic.file.String2File(V.global.log,"")
+F.Intrinsic.Control.endif
+'V.Global.completed.Set("X:\custUP\completed")
+V.Global.completed.Set("\\VCE-WPGSTERM01\custmast\completed")
+
+F.Intrinsic.File.DirExists(V.global.completed,V.Local.bRet)
+F.Intrinsic.Control.If(V.Local.bret,=,False)
+	F.Intrinsic.file.CreateDir(V.Global.completed)
+F.Intrinsic.Control.EndIf
+
+F.ODBC.Connection!conP.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+F.Intrinsic.Control.If(V.Ambient.isintaskscheduler,=,True)
+	F.Intrinsic.Control.CallSub(Processdir)
+F.Intrinsic.Control.Else
+	F.Intrinsic.ui.ShowOpenFileDialog("","","",V.Local.sFile)
+	F.Intrinsic.Control.CallSub(Processfile,"sFile",V.Local.sfile)
+F.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+Program.Sub.ProcessFile.Start
+
+V.Local.slines.Declare(String)
+V.Local.sline.Declare(String)
+V.Local.iL.Declare(Long)
+V.Local.iC.Declare(Long)
+V.Local.scustomer.Declare(String)
+V.local.squery.Declare(String)
+V.Local.stemp.Declare(String)
+V.Local.sdate.Declare(String)
+V.Local.bProc.Declare(Boolean)
+F.Intrinsic.String.Format(V.Ambient.Now,"MMDDYY",V.Local.sdate)
+
+F.Intrinsic.File.File2String(V.Args.sfile,V.Local.slines)
+F.Intrinsic.String.Split(V.Local.slines,V.Ambient.NewLine,V.Local.slines)
+F.Intrinsic.Debug.Stop
+F.Intrinsic.Control.For(V.Local.iL,1,V.Local.slines.UBound,1)
+	F.Intrinsic.Control.If(V.Local.slines(v.Local.iL),<>,"")
+		F.Intrinsic.string.SplitCSV(V.Local.slines(v.Local.iL),V.Local.sline)
+		F.Intrinsic.Control.If(V.Local.sline.UBound,>=,18)
+			V.Local.scustomer.Set(V.Local.sline(1))
+			F.Intrinsic.String.Mid(V.Local.sline(1),3,V.Local.scustomer)
+			F.Intrinsic.String.Concat("SELECT CUSTOMER FROM CUSTOMER_MASTER WHERE CUSTOMER = '",V.Local.scustomer,"'",V.Local.squery)
+			F.ODBC.Connection!conP.OpenRecordsetRO("rst",V.Local.squery)
+			F.Intrinsic.Control.If(V.ODBC.conP!rst.EOF,=,True)
+				F.Intrinsic.Control.If(V.Local.sline(1),=,"")
+					F.Intrinsic.String.Concat(V.Ambient.Date," ",V.Ambient.time,"No account number in file: ",V.Args.sfile,V.Local.squery)
+					F.Intrinsic.File.Append2File(V.Global.log,V.Local.squery)
+					F.global.Messaging.CreateEMMessage("gslogreview@vce.com","Log Review","gslogreview@vce.com","Log Review","Log Review",V.Local.squery)
+					F.Intrinsic.Control.end
+				F.Intrinsic.Control.EndIf
+				F.Intrinsic.Control.If(V.Local.sline(2),=,"")
+					F.Intrinsic.String.Concat(V.Ambient.Date," ",V.Ambient.time,"No account name in file: ",V.Args.sfile,V.Local.squery)
+					F.Intrinsic.File.append2File(V.Global.log,V.Local.squery)
+					F.global.Messaging.CreateEMMessage("gslogreview@vce.com","Log Review","gslogreview@vce.com","Log Review","Log Review",V.Local.squery)
+			
+					F.Intrinsic.Control.end
+				F.Intrinsic.Control.EndIf
+				V.Local.bProc.Set(True)
+				V.uGlobal.uCustomer(1)!Value.Set(V.Local.scustomer)
+				V.uGlobal.uCustomer(46)!Value.Set(V.Local.sline(1))
+				V.uGlobal.uCustomer(10)!Value.Set(V.Local.sline(0))
+				V.uGlobal.uCustomer(2)!Value.Set(V.Local.sline(2))
+				V.uGlobal.uCustomer(3)!Value.Set(V.Local.sline(3))
+				V.uGlobal.uCustomer(4)!Value.Set(V.Local.sline(4))
+				V.uGlobal.uCustomer(69)!Value.Set(V.Local.sline(5))
+				V.uGlobal.uCustomer(5)!Value.Set(V.Local.sline(6))
+				V.uGlobal.uCustomer(6)!Value.Set(V.Local.sline(7))
+				V.uGlobal.uCustomer(7)!Value.Set(V.Local.sline(9))
+				V.uGlobal.uCustomer(8)!Value.Set(V.Local.sline(8))
+				V.uGlobal.uCustomer(51)!Value.Set(V.Local.sline(10))
+				V.uGlobal.uCustomer(52)!Value.Set(V.Local.sline(11))
+				V.uGlobal.uCustomer(53)!Value.Set(V.Local.sline(13))
+				V.uGlobal.uCustomer(54)!Value.Set(V.Local.sline(14))
+				V.uGlobal.uCustomer(55)!Value.Set(V.Local.sline(16))
+				V.uGlobal.uCustomer(56)!Value.Set(V.Local.sline(15))
+				V.uGlobal.uCustomer(16)!Value.Set(V.Local.sline(17))
+				V.uGlobal.uCustomer(45)!Value.Set(V.Local.sline(18))
+				F.Intrinsic.Control.CallSub(Procudt)
+
+			F.Intrinsic.Control.EndIf
+			F.ODBC.conP!rst.Close
+		F.Intrinsic.Control.endif
+	F.Intrinsic.Control.endif
+F.Intrinsic.Control.Next(V.Local.iL)
+F.Intrinsic.Control.If(V.Local.bProc,=,True)
+	F.Intrinsic.String.Concat(V.Caller.CompanyCode,"1UPLCUST",V.Local.stemp)
+	F.Intrinsic.Task.LaunchGSSSync("UPL001A","-c",V.Local.stemp)
+	
+F.Intrinsic.Control.endif
+F.Intrinsic.file.GetFileNameFromFQN(V.Args.sfile,V.Local.stemp)
+F.Intrinsic.String.Concat(V.global.completed,"\",V.Local.stemp,V.Local.sdate," .csv",V.Local.stemp)
+F.Intrinsic.File.MoveFile(V.Args.sfile,V.Local.stemp,V.Local.stemp)
+
+Program.Sub.ProcessFile.End
+
+Program.Sub.ProcessDir.Start
+V.Local.sfiles.Declare(String)
+V.Local.iX.Declare(Long)
+V.Local.sDir.Declare(String)
+
+'V.Local.sDir.set("X:\CUSTUP\")
+V.Local.sDir.Set("\\ VCE-WPGSTERM01\custmast\")
+F.Intrinsic.Debug.stop
+F.Intrinsic.File.GetFileList(V.Local.sDir,2,V.Local.sfiles)
+
+F.Intrinsic.String.Split(V.Local.sfiles,":",V.Local.sfiles)
+
+F.Intrinsic.Control.For(V.Local.iX,V.Local.sfiles.LBound,V.Local.sfiles.UBound,1)
+	F.Intrinsic.String.Concat(V.Local.sDir,V.Local.sfiles(v.Local.iX),V.Local.sfiles(v.Local.iX))
+	F.Intrinsic.Control.CallSub(Processfile,"sfile",V.Local.sfiles(v.Local.iX))
+F.Intrinsic.Control.Next(V.Local.iX)
+
+Program.Sub.ProcessDir.End
+
+Program.Sub.PrepUDT.Start
+V.Uglobal.uCustomer.Redim(0,118)
+V.Local.iPos.Declare(Long)
+V.Local.iPos.Set(0)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("")
+V.uGlobal.uCustomer(v.Local.ipos)!Required.Set(False)
+
+
+
+V.Local.iPos.Set(1)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Customer Number")
+V.uGlobal.uCustomer(v.Local.ipos)!Required.Set(True)
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(2)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Customer Name")
+V.uGlobal.uCustomer(v.Local.ipos)!Required.Set(True)
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(3)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Address Line 1")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(4)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Address Line 2")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(5)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("City")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("15")
+			
+V.Local.iPos.Set(6)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("State")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(7)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Zip")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("13")
+			
+V.Local.iPos.Set(8)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Country")
+
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("12")
+			
+V.Local.iPos.Set(9)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("County")
+
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("12")
+			
+V.Local.iPos.Set(10)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Attention")
+
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(11)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Salesperson")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(12)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("International Address Flag")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(13)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Territory/Branch")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(14)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Area Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(15)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Credit Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(16)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Phone Number")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("13")
+			
+V.Local.iPos.Set(17)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 1")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(18)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 2")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(19)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 3")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+	
+V.Local.iPos.Set(20)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 4")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(21)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Normal GL Account")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("15")
+			
+V.Local.iPos.Set(22)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Balance Forward Flag")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(23)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Statment Indicator")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(24)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Credit Hold Flag")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(25)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Taxing State")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(26)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Intercompany Flag")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(27)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Exempt Number")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("20")
+			
+V.Local.iPos.Set(28)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Last Cash Receipt Date")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(29)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Last Cash Receipt Amount")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.Uglobal.uCustomer(v.Local.iPos)!Format.set("00000000000.00")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("16")
+			
+V.Local.iPos.Set(30)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Last Sale Date")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(31)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Last Sale Amount")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.Uglobal.uCustomer(v.Local.iPos)!Format.set("00000000000.00")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("16")
+			
+V.Local.iPos.Set(32)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Number of Invoices Paid")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.Uglobal.uCustomer(v.Local.iPos)!Format.set("000000")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("16")
+			
+V.Local.iPos.Set(33)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Total Number of Invoice Days")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.Uglobal.uCustomer(v.Local.iPos)!Format.set("00000000000")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("16")
+			
+V.Local.iPos.Set(34)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Finance Charge")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(35)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Contract Master")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(36)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Price Class")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(37)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("No Backorder Flag")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(38)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Customer Inception Date")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(39)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("SIC Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("4")
+			
+V.Local.iPos.Set(40)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Terms Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(41)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Use Goverment Pricing Flag")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(42)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Open Item Balance")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.Uglobal.uCustomer(v.Local.iPos)!Format.set("00000000000.00")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("16")
+			
+V.Local.iPos.Set(43)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Open Order Balance")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.Uglobal.uCustomer(v.Local.iPos)!Format.set("00000000000.00")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("16")
+			
+V.Local.iPos.Set(44)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Alpha Sort")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(45)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Fax Number")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("13")
+			
+V.Local.iPos.Set(46)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("User Sort Field")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("15")
+			
+V.Local.iPos.Set(47)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Commission Rate Type")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("5")
+			
+V.Local.iPos.Set(48)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("E-mail Address")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("43")
+			
+V.Local.iPos.Set(49)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Date Last Updated")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(50)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Name")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(51)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Address 1")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(52)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Address 2")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(53)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship City")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("15")
+			
+V.Local.iPos.Set(54)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship State")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(55)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Zip")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("13")
+			
+V.Local.iPos.Set(56)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Country")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("12")
+			
+V.Local.iPos.Set(57)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship County")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("12")
+			
+V.Local.iPos.Set(58)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Attention")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(59)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Via Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(60)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Collect Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(61)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Create EDI ASN (856)")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(62)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Create EDI Invoice (810)")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(63)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Freight Zone")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("10")
+			
+V.Local.iPos.Set(64)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("International Ship Address Flag")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(65)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Phone")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("13")
+			
+V.Local.iPos.Set(66)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Fax")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("13")
+			
+V.Local.iPos.Set(67)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Geo Code")
+
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(68)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Order Discount Percent")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.Uglobal.uCustomer(v.Local.iPos)!Format.set("00000000000.0000")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("16")
+			
+V.Local.iPos.Set(69)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("International Address Line 3")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(70)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("International Address Line 4")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(71)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("International Address Line 5")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(72)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("International Ship Address 3")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(73)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("International Ship Address 4")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(74)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("International Ship Address 5")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("30")
+			
+V.Local.iPos.Set(75)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Zip Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("13")
+			
+V.Local.iPos.Set(76)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Default Currency Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(77)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Catalog Currency Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(78)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 5")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(79)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 6")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(80)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 7")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(81)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 8")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(82)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 9")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(83)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Tax Code 10")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(84)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Price Category")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(85)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Always Discount Flag")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(86)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Packing List Report ID")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(87)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Acknowledgement Report ID")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(88)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Credit Card Number")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("25")
+			
+V.Local.iPos.Set(89)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Credit Card Type")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(90)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Credit Card Request Type")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(91)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("filler1")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(92)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Expiration Date")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("4")
+			
+V.Local.iPos.Set(93)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Validate Billing Address")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(94)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship and Invoice When Credit Card Rejects")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(95)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Supress Invoice Print for Credit Cards")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(96)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Order Amount on Hold")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(97)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Non-Back Amount on Hold")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(98)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Length")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(99)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Filler")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("190")
+			
+V.Local.iPos.Set(100)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Sales Order  Number Range Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(101)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("RMA Report ID")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(102)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Quote Report ID")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(103)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Invoice Credit Memo Report ID")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(104)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("filler 2")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(105)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Manufacturer Name")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("40")
+			
+V.Local.iPos.Set(106)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Single Group Quote")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(107)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("filler5")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("3")
+			
+V.Local.iPos.Set(108)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Carrier Code")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(109)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("filler3")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(110)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Ship Hold")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("1")
+			
+V.Local.iPos.Set(111)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("filler4")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("2")
+			
+V.Local.iPos.Set(112)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("3rd Party Freight Customer")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("7")
+			
+V.Local.iPos.Set(113)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("UPS Account Number")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("10")
+			
+V.Local.iPos.Set(114)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("FedEX Account Number")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("25")
+			
+V.Local.iPos.Set(115)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Configurator Discount")
+V.Uglobal.uCustomer(v.Local.iPos)!Numeric.set(True)
+V.Uglobal.uCustomer(v.Local.iPos)!Format.set("00000000000.0000")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("16")
+			
+V.Local.iPos.Set(116)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("Bill of Lading Label Report ID")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("6")
+			
+V.Local.iPos.Set(117)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("External ID")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("12")
+			
+V.Local.iPos.Set(118)
+V.Uglobal.uCustomer(v.Local.iPos)!Field.Set("filler 6")
+V.uGlobal.uCustomer(v.Local.ipos)!size.Set("87")
+
+Program.Sub.PrepUDT.End
+
+Program.Sub.ProcUDT.Start
+V.Local.ic.Declare(Long)
+V.Local.sOutput.Declare(String)
+V.Local.stemp.Declare(String)
+F.Intrinsic.Debug.Stop
+F.Intrinsic.Control.For(V.Local.ic,1,V.uglobal.uCustomer.UBound,1)
+	V.Local.stemp.Set("")
+	F.Intrinsic.Control.if(V.uGlobal.uCustomer(v.Local.ic)!Numeric,=,True)
+		F.Intrinsic.Control.If(V.Uglobal.uCustomer(v.Local.ic)!Format,<>,"")
+			F.Intrinsic.Control.If(V.uGlobal.uCustomer(v.Local.ic)!Value.IsNumeric,=,True)
+				F.Intrinsic.String.Format(V.uglobal.uCustomer(V.Local.ic)!value,V.Uglobal.uCustomer(V.Local.ic)!Format,V.Local.stemp)
+			F.Intrinsic.Control.endif
+		F.Intrinsic.Control.Else
+			V.Local.stemp.Set(V.uGlobal.uCustomer(v.Local.ic)!Value)
+		F.Intrinsic.Control.EndIf
+		
+		F.Intrinsic.string.LPad(V.Local.stemp,"0",V.uGlobal.uCustomer(v.Local.ic)!Size,V.Local.stemp)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.string.RPad(V.uGlobal.uCustomer(v.Local.ic)!Value," ",V.uGlobal.uCustomer(v.Local.ic)!Size,V.Local.stemp)
+
+	F.Intrinsic.Control.endif
+	F.Intrinsic.Control.If(V.Local.sOutput.Length,=,0)
+		V.Local.sOutput.Set(V.Local.stemp)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Concat(V.Local.sOutput,V.Local.stemp,V.Local.sOutput)
+	F.Intrinsic.Control.endif
+
+F.Intrinsic.Control.next(V.Local.ic)
+F.Intrinsic.Debug.Stop
+F.Intrinsic.Control.If(V.global.file,=,"")
+	F.Intrinsic.String.Concat(V.caller.FilesDir,"\CUSTOMER.txt",V.global.file)
+	F.Intrinsic.file.String2File(V.Global.file,V.Local.sOutput)
+F.Intrinsic.Control.Else
+	F.Intrinsic.File.Append2File(V.global.file,V.Local.sOutput)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.For(V.Local.ic,1,V.uglobal.uCustomer.UBound,1)
+	V.Uglobal.uCustomer(v.Local.ic)!Value.Set("")
+F.Intrinsic.Control.next(V.Local.ic)
+
+Program.Sub.ProcUDT.End
+
+Program.Sub.Comments.Start
+${$0$}$ATG_VCE_CUSTOMER_UPLOAD$}$JND$}$3/15/2012
+${$3$}$0$}$$}$-1$}$-1$}$$}$1/1/1900$}$Quote 3401
+Program.Sub.Comments.End
+
